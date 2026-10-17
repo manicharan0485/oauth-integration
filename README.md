@@ -13,6 +13,24 @@ A small Node.js app showing the pieces of a real API integration:
   - Microsoft Graph change notifications: `validationToken` handshake and `clientState` check
 - Tests with `node --test` (no test framework needed)
 
+## Demo (GitHub sign-in)
+
+Run locally at `http://localhost:3000`.
+
+**1. Signed out.** Both providers show a Sign in link.
+
+![Signed out](docs/01-signed-out.png)
+
+**2. Redirect to GitHub.** The browser is sent to GitHub's authorize endpoint with `state` and the PKCE challenge. The user logs in at GitHub, so the app never sees the password.
+
+![GitHub redirect](docs/02-github-redirect.png)
+
+**3. Signed in.** The server exchanges the code for a token and calls `GET /user`. The page shows the user and granted scopes.
+
+![Signed in](docs/03-signed-in.png)
+
+GitHub sign-in was verified live. Microsoft Entra ID sign-in is implemented and unit-tested but has not been run against a live tenant.
+
 ## Run it
 
 ```bash
