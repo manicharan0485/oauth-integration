@@ -1,5 +1,7 @@
 # OAuth 2.0 Integration Demo
 
+[![Tests](https://github.com/manicharan0485/oauth-integration/actions/workflows/test.yml/badge.svg)](https://github.com/manicharan0485/oauth-integration/actions/workflows/test.yml)
+
 A small Node.js app showing the pieces of a real API integration:
 
 - **OAuth 2.0 authorization code flow with PKCE (S256)** against **Microsoft Entra ID** and **GitHub**
