@@ -97,8 +97,8 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  gh(("GitHub"))
-  graph(("Microsoft Graph"))
+  ghsender(("GitHub"))
+  msgraph(("Microsoft Graph"))
 
   subgraph app["App (src/)"]
     server["HTTP routes<br/>server.js"]
@@ -109,10 +109,10 @@ flowchart LR
 
   viewer(("Browser /events"))
 
-  gh -->|"POST /webhooks/github"| server
+  ghsender -->|"POST /webhooks/github"| server
   server -->|"verify HMAC on raw body"| ghcheck
   ghcheck -->|"valid"| events
-  graph -->|"POST /webhooks/graph"| server
+  msgraph -->|"POST /webhooks/graph"| server
   server -->|"validationToken or clientState"| graphcheck
   graphcheck -->|"valid events"| events
   events -->|"read"| viewer
@@ -120,7 +120,7 @@ flowchart LR
   classDef mint fill:#dcfce7,stroke:#16a34a,color:#14532d
   classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f
   classDef blue fill:#dbeafe,stroke:#2563eb,color:#172554
-  class ghcheck,graphcheck,gh,graph mint
+  class ghcheck,graphcheck,ghsender,msgraph mint
   class server,events amber
   class viewer blue
 ```
