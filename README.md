@@ -55,66 +55,74 @@ Create a subscription (`POST /v1.0/subscriptions`) with `notificationUrl` = `htt
 
 ## Architecture
 
-How the modules in `src/` fit together. Generated with [GitDiagram](https://gitdiagram.com/manicharan0485/oauth-integration).
+How the modules in `src/` fit together, in two parts. Based on a diagram generated with [GitDiagram](https://gitdiagram.com/manicharan0485/oauth-integration).
+
+### Sign-in and API calls
 
 ```mermaid
-flowchart TD
+flowchart LR
+  browser(("Browser"))
+  idp{{"Entra ID / GitHub"}}
+  api{{"Graph / GitHub API"}}
 
-subgraph group_auth["OAuth flow"]
-  node_oauth["OAuth and PKCE<br/>[oauth.js]"]
-  node_providers["Provider definitions<br/>[providers.js]"]
-end
+  subgraph app["App (src/)"]
+    server["HTTP routes<br/>server.js"]
+    session[("Session state<br/>server.js")]
+    oauth["OAuth and PKCE<br/>oauth.js"]
+    providers["Provider config<br/>providers.js"]
+  end
 
-subgraph group_app["App and sessions"]
-  node_server["HTTP routes<br/>[server.js]"]
-  node_session[("Session state<br/>[server.js]")]
-  node_ui["Profile and events views<br/>[server.js]"]
-end
+  browser -->|"1. starts sign-in"| server
+  server -->|"2. stores state + verifier"| session
+  server -->|"3. builds redirect"| oauth
+  oauth -->|"reads endpoints"| providers
+  browser -->|"4. follows redirect, logs in"| idp
+  idp -->|"5. returns code + state"| server
+  server -->|"6. checks state"| session
+  server -->|"7. exchanges code"| oauth
+  oauth -->|"8. token request"| idp
+  server -->|"9. fetches profile"| providers
+  providers -->|"10. API call with token"| api
+  server -->|"11. stores tokens + profile"| session
 
-subgraph group_hooks["Webhooks"]
-  node_github_hook["GitHub signature check<br/>[webhooks.js]"]
-  node_graph_hook["Graph notification check<br/>[webhooks.js]"]
-  node_event_log[("In-memory events<br/>[server.js]")]
-end
+  classDef blue fill:#dbeafe,stroke:#2563eb,color:#172554
+  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef indigo fill:#e0e7ff,stroke:#4f46e5,color:#312e81
+  class oauth,providers,browser blue
+  class server,session amber
+  class idp,api indigo
+```
 
-node_browser(("Browser"))
-node_identity{{"Entra ID and GitHub"}}
-node_profile_apis{{"Graph and GitHub profile APIs"}}
-node_github_sender(("GitHub webhook sender"))
-node_graph_sender(("Microsoft Graph"))
+### Webhooks
 
-node_browser -->|"starts sign-in"| node_server
-node_server -->|"binds state"| node_session
-node_server -->|"builds redirect"| node_oauth
-node_oauth -->|"reads endpoints"| node_providers
-node_browser -->|"follows redirect"| node_identity
-node_identity -->|"returns callback"| node_server
-node_server -->|"checks state"| node_session
-node_server -->|"exchanges code"| node_oauth
-node_oauth -->|"posts token request"| node_identity
-node_server -->|"fetches profile"| node_providers
-node_providers -->|"requests profile"| node_profile_apis
-node_server -->|"stores tokens and profile"| node_session
-node_browser -->|"requests refresh"| node_server
-node_server -->|"refreshes token"| node_oauth
-node_server -->|"serves views"| node_ui
-node_ui -->|"reads profile"| node_session
-node_github_sender -->|"posts webhook"| node_server
-node_server -->|"verifies signature"| node_github_hook
-node_server -->|"records event"| node_event_log
-node_graph_sender -->|"posts notification"| node_server
-node_server -->|"checks notification"| node_graph_hook
-node_graph_hook -->|"returns valid events"| node_event_log
-node_ui -->|"reads events"| node_event_log
+```mermaid
+flowchart LR
+  gh(("GitHub"))
+  graph(("Microsoft Graph"))
 
-classDef toneBlue fill:#dbeafe,stroke:#2563eb,stroke-width:1.5px,color:#172554
-classDef toneAmber fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#78350f
-classDef toneMint fill:#dcfce7,stroke:#16a34a,stroke-width:1.5px,color:#14532d
-classDef toneIndigo fill:#e0e7ff,stroke:#4f46e5,stroke-width:1.5px,color:#312e81
-class node_oauth,node_providers,node_browser toneBlue
-class node_server,node_session,node_ui toneAmber
-class node_github_hook,node_graph_hook,node_event_log,node_profile_apis,node_github_sender toneMint
-class node_identity,node_graph_sender toneIndigo
+  subgraph app["App (src/)"]
+    server["HTTP routes<br/>server.js"]
+    ghcheck["Signature check<br/>webhooks.js"]
+    graphcheck["Notification check<br/>webhooks.js"]
+    events[("In-memory events<br/>server.js")]
+  end
+
+  viewer(("Browser /events"))
+
+  gh -->|"POST /webhooks/github"| server
+  server -->|"verify HMAC on raw body"| ghcheck
+  ghcheck -->|"valid"| events
+  graph -->|"POST /webhooks/graph"| server
+  server -->|"validationToken or clientState"| graphcheck
+  graphcheck -->|"valid events"| events
+  events -->|"read"| viewer
+
+  classDef mint fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef amber fill:#fef3c7,stroke:#d97706,color:#78350f
+  classDef blue fill:#dbeafe,stroke:#2563eb,color:#172554
+  class ghcheck,graphcheck,gh,graph mint
+  class server,events amber
+  class viewer blue
 ```
 
 ## Flow
